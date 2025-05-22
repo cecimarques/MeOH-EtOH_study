@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov 22 13:57:38 2024
-
-@author: u2371853
+@author: Cecilia Alvares
 """
 
 # This code computes the function C(t) as defined by the paper by Richard and
