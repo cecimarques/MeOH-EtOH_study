@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+@author: Cecilia Alvares
+"""
+# ---------------------------------------------------------------------------
 # This code is going to read the com.out file output by running the script
 # lammps_rdf-com1.md in LAMMPS and create a coarsened trajectory out of it.
 
