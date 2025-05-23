@@ -1,0 +1,31 @@
+units		real
+atom_style	full
+boundary        p p p
+
+# ------------------------------------------------------------
+pair_style      lj/charmmfsw/coul/long 10 12
+pair_modify     mix arithmetic
+kspace_style    pppm 1e-6
+
+bond_style      harmonic
+angle_style     charmm
+dihedral_style  charmmfsw
+special_bonds   charmm
+improper_style  harmonic
+
+# This is a configuration for the given system of interest. It contains also the potential parameters
+# for CGenFF. Note that the atoms composing each molecule composing the system is assigned a molecule ID
+# so that ultimately each distinct molecule ties back to an exclusive molecule ID.
+read_data       input.data
+
+neighbor        0.5 bin 
+neigh_modify    delay 0 every 1 check yes
+
+thermo_style    custom xlo xhi ylo yhi zlo zhi vol
+thermo          500
+
+compute		myChunks all chunk/atom molecule
+compute		myCom all com/chunk myChunks
+fix 		1 all ave/time 500 1 500 c_myCom[*] file com.out mode vector
+
+rerun		dump.pos first 0 last 1000000 every 500 dump x y z 
