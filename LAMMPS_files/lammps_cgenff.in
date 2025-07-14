@@ -1,0 +1,87 @@
+units		real
+atom_style	full
+boundary        p p p
+
+# ------------------------------------------------------------
+pair_style      lj/charmmfsw/coul/long 10 12
+pair_modify     mix arithmetic
+kspace_style    pppm 1e-6
+
+bond_style      harmonic
+angle_style     charmm
+dihedral_style  charmmfsw
+special_bonds   charmm
+improper_style  harmonic
+
+# ------------------------------------------------------------
+read_data       final_pos.dat
+
+neighbor        0.5 bin 
+neigh_modify    delay 0 every 1 check yes
+
+thermo_style    custom step temp pe etotal press pxx pyy pzz pxy pxz pyz xlo xhi ylo yhi zlo zhi vol
+thermo          500
+
+# ---------------------------------------------------------------------
+timestep	1
+
+# Variables useful for outputting Pij components in a more readily fashion than catching them from the log file.
+variable	cpe equal pe
+variable	cvol equal vol
+variable	cent equal enthalpy
+variable	cpress equal press
+variable	cpxx equal pxx
+variable	cpyy equal pyy
+variable	cpzz equal pzz
+variable	cpxy equal pxy
+variable	cpxz equal pxz
+variable	cpyz equal pyz
+
+# Variable useful for the checking-up-lz box length
+variable	czlo equal zlo
+variable	czhi equal zhi
+
+# ----------------------------------------------------------------------------
+# Now let's start defining the setup for each iteration
+
+variable	a loop 1 50
+
+label		loop
+
+variable	pressao equal 2000*$a
+
+fix             1 all npt temp 300.0 300.0 $(100*dt) z ${pressao} ${pressao} $(1000*dt) 
+run		1000000
+unfix		1
+
+# Production !
+reset_timestep  0
+
+fix 		4 all ave/time 100 1 100 v_cvol v_cpe v_cent v_cpress v_cpxx v_cpyy v_cpzz v_cpxy v_cpxz v_cpyz file prpts_${pressao}.out mode scalar
+fix 		5 all ave/time 50 2000 100000 v_czlo v_czhi file box_${pressao}.out mode scalar
+
+# Note that all these atom types declared below exist only in the case of simulation for MeOH-EtOH mixtures (need to be adapted accordingly for the pure components as no such atom types exist).
+compute         myRDF all rdf 1100 1 1 1 2 1 3 1 4 1 5 1 6 1 7 1 8 1 9 1 10 2 2 2 3 2 4 2 5 2 6 2 7 2 8 2 9 2 10 3 3 3 4 3 5 3 6 3 7 3 8 3 9 3 10 4 4 4 5 4 6 4 7 4 8 4 9 4 10 5 5 5 6 5 7 5 8 5 9 5 10 6 6 6 7 6 8 6 9 6 10 7 7 7 8 7 9 7 10 8 8 8 9 8 10 9 9 9 10 10 10 cutoff 11
+fix             myRDF1 all ave/time 50 20000 1000000 c_myRDF[*] file rdf_${pressao}.dat mode vector
+
+# This trajectory is needed in order to compute the msd later on. Please, see the details on the SI to see how to accomplish it.
+dump            myDump all custom 500 dump_${pressao}.pos id type xu yu zu vx vy vz
+
+write_data	equilibrated_${pressao}
+
+fix             1 all npt temp 300.0 300.0 $(100*dt) z ${pressao} ${pressao} $(1000*dt) 
+run		1000000
+unfix		1
+
+undump		myDump 
+
+uncompute	myRDF
+unfix		myRDF1
+
+unfix		4
+unfix		5
+
+write_data	step_${pressao}
+
+next		a
+jump		lammps.in loop
